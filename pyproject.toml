@@ -1,0 +1,15 @@
+[project]
+name = "telegram-chine"
+version = "0.1.0"
+description = "Telegram catalog bot for Chinese suppliers reselling"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.17",
+    "aiosqlite>=0.22.1",
+    "fastapi>=0.135.1",
+    "loguru>=0.7.3",
+    "pydantic-settings>=2.13.1",
+    "sqlmodel>=0.0.37",
+    "uvicorn[standard]>=0.41.0",
+]
+

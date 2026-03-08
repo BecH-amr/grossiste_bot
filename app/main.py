@@ -1,0 +1,75 @@
+import asyncio
+import contextlib
+import hmac
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Header, HTTPException, Request
+from loguru import logger
+from sqlmodel import SQLModel
+
+from app.bot.setup import bot, dp, register_handlers
+from app.core.config import settings
+from app.core.database import engine
+
+
+async def init_db() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    logger.info("Database tables ready")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    register_handlers()
+
+    polling_task = None
+    if settings.USE_POLLING:
+        logger.info("Starting bot in polling mode")
+        polling_task = asyncio.create_task(dp.start_polling(bot))
+    else:
+        webhook_url = f"{settings.WEBHOOK_URL}/webhook/{settings.BOT_TOKEN}"
+        await bot.set_webhook(webhook_url, secret_token=settings.SECRET_TOKEN)
+        logger.info("Webhook configured")
+
+    yield
+
+    if polling_task is not None:
+        polling_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await polling_task
+    else:
+        await bot.delete_webhook()
+
+    await bot.session.close()
+    await engine.dispose()
+    logger.info("Bot shut down")
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.post("/webhook/{token}")
+async def webhook(
+    token: str,
+    request: Request,
+    x_telegram_bot_api_secret_token: str = Header(default=""),
+) -> dict:
+    if not hmac.compare_digest(token, settings.BOT_TOKEN):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if not hmac.compare_digest(x_telegram_bot_api_secret_token, settings.SECRET_TOKEN):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    from aiogram.types import Update
+    update = Update.model_validate(await request.json(), context={"bot": bot})
+    await dp.feed_update(bot, update)
+    return {"ok": True}
+
+
+def main() -> None:
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,4 @@
-# Grossiste Import — Telegram Bot
+# Grossiste Bot
 
 Catalog bot for wholesale product resale. Customers browse categories, view products with photos and prices, and reach out via Snapchat to order.
 
