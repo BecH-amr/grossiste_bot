@@ -26,7 +26,13 @@ async def lifespan(app: FastAPI):
     polling_task = None
     if settings.USE_POLLING:
         logger.info("Starting bot in polling mode")
-        polling_task = asyncio.create_task(dp.start_polling(bot))
+        async def _poll() -> None:
+            try:
+                await dp.start_polling(bot)
+            except Exception as e:
+                logger.exception("Polling failed: {}", e)
+                raise
+        polling_task = asyncio.create_task(_poll())
     else:
         webhook_url = f"{settings.WEBHOOK_URL}/webhook/{settings.BOT_TOKEN}"
         await bot.set_webhook(webhook_url, secret_token=settings.SECRET_TOKEN)
@@ -61,8 +67,11 @@ async def webhook(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     from aiogram.types import Update
-    update = Update.model_validate(await request.json(), context={"bot": bot})
-    await dp.feed_update(bot, update)
+    try:
+        update = Update.model_validate(await request.json(), context={"bot": bot})
+        await dp.feed_update(bot, update)
+    except Exception as e:
+        logger.exception("Failed to process update: {}", e)
     return {"ok": True}
 
 

@@ -12,17 +12,18 @@ from sqlmodel import SQLModel
 
 
 async def main(name: str, file_id: str) -> None:
-    async with async_session_factory() as session:
-        result = await session.execute(select(Product).where(Product.name == name))
-        product = result.scalars().first()
-        if not product:
-            print(f"Produit introuvable: {name!r}")
-            return
-        product.photo_file_id = file_id
-        await session.commit()
-        print(f"OK: {product.name}")
-
-    await engine.dispose()
+    try:
+        async with async_session_factory() as session:
+            result = await session.execute(select(Product).where(Product.name == name))
+            product = result.scalars().first()
+            if not product:
+                print(f"Produit introuvable: {name!r}")
+                return
+            product.photo_file_id = file_id
+            await session.commit()
+            print(f"OK: {product.name}")
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ async def _edit_or_replace(message: Message, text: str, **kwargs) -> None:
         try:
             await message.edit_text(text, **kwargs)
         except TelegramBadRequest:
-            pass
+            await message.answer(text, **kwargs)
 
 
 @router.callback_query(lambda c: c.data == "show_categories")
@@ -90,4 +90,7 @@ async def cb_show_product(call: CallbackQuery, callback_data: ProductCB) -> None
         except TelegramBadRequest:
             pass
     else:
-        await call.message.edit_text(caption, reply_markup=keyboard)
+        try:
+            await call.message.edit_text(caption, reply_markup=keyboard)
+        except TelegramBadRequest:
+            await call.message.answer(caption, reply_markup=keyboard)

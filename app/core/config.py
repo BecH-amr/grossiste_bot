@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DB_URL: str = "sqlite+aiosqlite:///./catalog.db"
     USE_POLLING: bool = True
 
-    CONTACT_SNAPCHAT: str = "@your_snapchat"
+    CONTACT_SNAPCHAT: str  # required — your Snapchat handle (e.g. @your_snap)
 
 
 settings = Settings()
