@@ -55,6 +55,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.get("/")
+async def healthcheck() -> dict:
+    return {"ok": True}
+
+
 @app.post("/webhook/{token}")
 async def webhook(
     token: str,
